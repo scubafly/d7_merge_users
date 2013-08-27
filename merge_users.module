@@ -1,0 +1,269 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * This module uses some hooks to let users login, edit their account.
+ * A user should be able to login to each site with this module enabled and that is connected to the alternative database.
+ */
+
+/**
+ * hook user creates account
+ * Create user in alternative database upon registration
+ * Implements hook_user_insert()
+ */
+function merge_users_user_insert(&$edit, $account, $category) {
+  global $base_url;
+
+  $uid = $account->uid;
+  // dsm($category); // == account
+  $domain = preg_replace('#^https?://#', '', $base_url); // striped $base_url
+
+  // change database to uniqueuser
+  db_set_active('uniqueuser');
+
+  // get wid using $domain
+  $query = db_select('domain_wid', 'dw');
+  $query->fields('dw', array('wid'));
+  $query->condition('domain', $domain);
+  $result = $query->execute()->fetchfield();
+
+  // if domain not found insert new and load $result with autoincrement id (wid)
+  if(!$result) {
+    $result = db_insert('domain_wid')
+      ->fields( array(
+      'domain' => $domain,
+    ))
+    ->execute();
+  }
+
+  // set $wid
+  $wid = $result;
+
+  // insert user also intu users_websites in uniqueuser
+  $query = db_insert('users_websites')
+  ->fields( array(
+    'uid' => $uid,
+    'wid' => $wid,
+  ))
+  ->execute();
+
+  // switch back to default database
+  db_set_active();
+}
+
+
+/**
+ * hook user logs in
+ */
+function merge_users_form_alter(&$form, &$form_state, $form_id) {
+  if($form_id == 'user_login') {
+    // adding an custom validator but leaving original validation as it is.
+    $form['#validate'][] = 'merge_users_login_validate';
+    // $form['#validate'][] = array('merge_users_login_submit');
+  }
+}
+
+/**
+ * just named this function needs to be called somewhere... ( cron ?)
+ */
+function merge_users_import_users() {
+  /**
+   TODO's
+
+   - local update drupal site
+   - live drupal site update
+   - export live drupal db to local new instance
+   - start import on local db from live website
+  */
+
+  // start with a small batch
+  // import 3 users
+
+  // TODO set active some db
+  db_set_active();
+
+  // select users from forein db
+
+  // save users using user_save function
+
+  // now we have imported the users to the unique user table
+
+  // we now need to update the fields $user was using.
+
+  // when done, whe can point the forein website to the unique user database.
+
+  // problems: taxonomie terms, may not be compatiable trough wrong id's
+
+}
+
+/**
+ * helper function
+ */
+function merge_users_get_db_schemas(){
+  db_set_active('uniqueuser');
+
+  $query = db_select('domain_wid', 'dw');
+  $query->fields('dw', array('database_schema','wid'));
+  $result = $query->execute()->fetchAll();
+
+  db_set_active();
+
+  return $result;
+}
+
+/**
+ * Custom Authentication handler
+ */
+function merge_users_login_validate($form, &$form_state) {
+  $name = $form_state['values']['name'];
+  $pass = $form_state['values']['pass'];
+
+  $errors = form_get_errors();
+  if($errors) {
+    // clear errors
+    form_clear_error();
+    // clear error messages
+    $error_messages = drupal_get_messages('error');
+    // Initialize an array where removed error messages are stored.
+    $removed_messages = array();
+  }
+  // this function is always called upon user_login form submit.
+  // but not on login bij "lees meer" link.
+
+  $uid = user_authenticate($name, $pass);
+
+  // if user is not authenticated ( user does not exist, or wrong username/pass )
+  if(!$uid) { // tested and works 13-8-13 15:30
+    // user does not exists or login info is incorrect.
+
+    // check username exists in unique user database.
+    // asuming every username is unique for now
+    // so we can check if user does or does not exists in unique user table
+    $query = db_select('users','u');
+    $query->fields('u', array('uid'));
+    $query->condition('u.name', $name);
+
+    $result = $query->execute()->fetchfield();
+    // if result -> user exists so credentials are incorrect
+    if(!$result) {
+
+      // no result lets check the other databases.
+      $database_schemas = merge_users_get_db_schemas();
+
+      foreach($database_schemas as $schema) {
+        $uid = 0;
+        $account = 0;
+
+        db_set_active($schema->database_schema);
+        $query = db_select('users', 'u');
+        $query->fields('u');
+        $query->condition('u.name', $name);
+        $account = $query->execute()->fetchObject();
+
+        if($account) {
+
+          // put user in object variable
+          $account = user_load($account->uid);
+          // switch back to the unique user database.
+          db_set_active();
+
+          // force to see this as new account for insert.
+          $account->uid = "";
+          $account->is_new = TRUE;
+
+          $account = user_save($account);
+          require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+
+          $ispassok = user_check_password($pass, $account);
+          // get user password hash
+          if ($ispassok) {
+            // log user in
+            global $user;
+            $user = $account;
+            // set new uid
+            $form_state['uid'] = $account->uid;
+            // call finalize login which calls redirect page to user/$uid
+            user_login_finalize($form_state);
+          }
+          else {
+            // delete user from this database.
+            user_delete($account->uid);
+            // reinstate form check let drupal handle the erros :)
+            user_login_final_validate($form, $form_state);
+          }
+          // break so it is not gonna check the other databases.
+          // after all username was found but it could be that we have more
+          // users with the same username???
+          // I think we'll be save ignoring this for now and going for the speed
+          // advantage above chechking every database.
+          break;
+        }
+      } // end foreach
+    }
+    else { // else: user does not exist in main database
+      // let drupal handle it :)
+      user_login_final_validate($form, $form_state);
+    }
+
+      //    update tables with new uid
+      //    tables to update:
+      //    file_managed
+      //    history
+      //    node
+      //    node_revision
+      //    profile
+      //    sessions
+      //    twitter_account
+      //
+      //    update tables with new entity_id
+      //    field_data_field_achternaam
+      //    field_data_field_bedrijfslogo
+      //    field_data_field_bedrijfsnaam
+      //    field_data_field_city
+      //    field_data_field_dienstverb
+      //    field_data_field_education
+      //    field_data_field_functie
+      //    field_data_field_functioncat
+      //    field_data_field_link
+      //    field_data_field_management_experience
+      //    field_data_field_postcode
+      //    field_data_field_state
+      //    field_data_field_straat_nr
+      //    field_data_field_telnr_algemeen_
+      //    field_data_field_telnr_direct_
+      //    field_data_field_voornaam
+      //    field_data_field_werkweek
+      //    field_data_user_cv
+      //
+      //    field_revision_field_achternaam
+      //    field_revision_field_bedrijfslogo
+      //    field_revision_field_bedrijfsnaam
+      //    field_revision_field_city
+      //    field_revision_field_dienstverb
+      //    field_revision_field_education
+      //    field_revision_field_functie
+      //    field_revision_field_functioncat
+      //    field_revision_field_link
+      //    field_revision_field_management_experience
+      //    field_revision_field_postcode
+      //    field_revision_field_state
+      //    field_revision_field_straat_nr
+      //    field_revision_field_telnr_algemeen_
+      //    field_revision_field_telnr_direct_
+      //    field_revision_field_voornaam
+      //    field_revision_field_werkweek
+      //    field_revision_user_cv
+      //
+      //    votingapi_cache
+      //    votingapi_vote
+      //
+      //  }
+  }
+  // return to normal db if not already using this db...
+  db_set_active();
+}
+
+/**
+ * hook to save user profile
+ */
