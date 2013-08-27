@@ -1,0 +1,85 @@
+<?php
+/*
+  before using this module create the exstra database
+  see https://drupal.org/node/18429 for mor details.
+ */
+
+/*
+ * Implements a hook_schema clone which is manualy called in the merge_users_install and uninstall hooks
+ * database_schema needs to be filled in manualy and added to the site settings .php file
+ * Also this module needs to be updated to also check that database for the user.
+ */
+function merge_users_schema_uniqueuser() {
+  $schema['users_websites'] = array(
+    'description' => 'uid and website ids',
+    'fields' => array(
+      'uuid' => array(
+        'description' => 'The primary identifier for users_websites.',
+        'type' => 'serial', // auto increment
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'the uid',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'wid' => array(
+        'description' => 'the website id',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+    ),
+    'primary key' => array('uuid'),
+  );
+  $schema['domain_wid'] = array(
+    'description' => 'domains and their ids',
+    'fields' => array(
+      'domain' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+      'database_schema' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'default' => '',
+        'not null' => FALSE,
+      ),
+      'wid' => array(
+        'type' =>'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+    ),
+    'primary key' => array('wid'),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_install()
+ */
+function merge_users_install() {
+  db_set_active('uniqueuser');
+  $schema = merge_users_schema_uniqueuser();
+  foreach ($schema as $name => $table) {
+    db_create_table($name, $table);
+  }
+  db_set_active();
+}
+
+/**
+ * Implements hook_uninstall()
+ */
+function merge_users_uninstall() {
+  db_set_active('uniqueuser');
+  $schema = merge_users_schema_uniqueuser();
+  foreach ($schema as $name => $table) {
+    db_drop_table($name);
+  }
+  db_set_active();
+}
