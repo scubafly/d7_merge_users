@@ -1,0 +1,10 @@
+;Id$
+
+name = merge users
+description = create new table in alternative database. and some hooks to let users login, edit their account so a user should be able to login to each site with this module and connected to the alternative database.
+package = jbbi
+core = 7.x
+files[] = merge_users.module
+files[] = merge_users.install
+
+version = "7.x-0.2-alfa"
