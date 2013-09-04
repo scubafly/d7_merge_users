@@ -272,9 +272,11 @@ function merge_users_from_db($schema) {
   // dsm($result);
   $i = 0;
   foreach($result as $user) {
-    $accounts[$user->uid] = user_load($user->uid);
-    $accounts[$user->uid]->uid = "";
-    $accounts[$user->uid]->is_new = TRUE;
+    if($user->uid != 1 AND $user->uid != 0) {
+      $accounts[$user->uid] = user_load($user->uid);
+      $accounts[$user->uid]->uid = "";
+      $accounts[$user->uid]->is_new = TRUE;
+    }
   }
 
   // $account now contains an array of user objects.
