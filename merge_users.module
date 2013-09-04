@@ -34,7 +34,7 @@ function merge_users_menu(){
     'type' => MENU_CALLBACK,
     'title' => 'start merge from db',
     'page callback' => 'merge_users_from_db',
-    'access arguments' => array('administer site configuration'),
+    'access arguments' => array('administer site configuration', 4),
   );
   return $items;
 }
@@ -45,9 +45,11 @@ function merge_users_menu(){
 function merge_users_start_merge_callback() {
   // admin/config/merge_users/merge
   $schemas = merge_users_get_db_schemas();
-  dsm($schemas);
-  $return = implode(" ", merge_users_get_db_schemas());
-  $return .= l(t('Start db merge'), 'admin/config/merge_users/merge', array('attributes' => array('class' => array())));
+  foreach($schemas as $schema) {
+    $return .= l(t('Start db merge from '. $schema->database_schema), 'admin/config/merge_users/merge/' . $schema->database_schema, array('attributes' => array('class' => array())));
+    $return .= "<br />";
+  }
+
 
   return $return;
 }
@@ -258,19 +260,38 @@ function merge_users_login_validate($form, &$form_state) {
  * get all users from old db
  */
 function merge_users_from_db($schema) {
+  // dsm($schema);
   // select old db
   db_set_active($schema);
 
   // select uids from users in old db
   $query = db_select('users','u');
   $query->fields('u', array('uid'));
-  $result = $query->execute->fetchAll();
+  $result = $query->execute()->fetchAll();
 
-  dms($result);
-  // insert user in new db
-  // $account = user_save()
+  // dsm($result);
+  $i = 0;
+  foreach($result as $user) {
+    $accounts[$user->uid] = user_load($user->uid);
+    $accounts[$user->uid]->uid = "";
+    $accounts[$user->uid]->is_new = TRUE;
+  }
+
+  // $account now contains an array of user objects.
+  dsm($accounts);
+  db_set_active(); // set unique database as active db....
+  /**
+  need to alter settings.php so users table from unique user db is used
+  */
+
+  foreach($accounts as $old_uid => $account) {
+    // insert user in new db
+    $new_uid = user_save($account);
+    // update tables from old db
+    // update tablename set uid / entity_id = $new_uid where uid / entity_id = $old_uid
+  }
+
   // update user fields with newly saved user
-
 
   //    update tables with new uid :
   //
@@ -325,4 +346,5 @@ function merge_users_from_db($schema) {
   //
   //    votingapi_cache
   //    votingapi_vote
+  return "";
 }
