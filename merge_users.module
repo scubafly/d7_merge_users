@@ -5,6 +5,7 @@
  * @file
  * This module uses some hooks to let users login, edit their account.
  * A user should be able to login to each site with this module enabled and that is connected to the alternative database.
+ * NOTE: make sure other db's are defined in settings.php
  */
 
 /**
@@ -149,7 +150,6 @@ function merge_users_get_db_schemas(){
   $query = db_select('domain_wid', 'dw');
   $query->fields('dw', array('database_schema','wid'));
   $result = $query->execute()->fetchAll();
-
   db_set_active();
 
   return $result;
