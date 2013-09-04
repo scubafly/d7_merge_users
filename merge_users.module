@@ -52,7 +52,6 @@ function merge_users_user_insert(&$edit, $account, $category) {
   db_set_active();
 }
 
-
 /**
  * hook user logs in
  */
@@ -206,64 +205,80 @@ function merge_users_login_validate($form, &$form_state) {
       user_login_final_validate($form, $form_state);
     }
 
-      //    update tables with new uid
-      //    tables to update:
-      //    file_managed
-      //    history
-      //    node
-      //    node_revision
-      //    profile
-      //    sessions
-      //    twitter_account
-      //
-      //    update tables with new entity_id
-      //    field_data_field_achternaam
-      //    field_data_field_bedrijfslogo
-      //    field_data_field_bedrijfsnaam
-      //    field_data_field_city
-      //    field_data_field_dienstverb
-      //    field_data_field_education
-      //    field_data_field_functie
-      //    field_data_field_functioncat
-      //    field_data_field_link
-      //    field_data_field_management_experience
-      //    field_data_field_postcode
-      //    field_data_field_state
-      //    field_data_field_straat_nr
-      //    field_data_field_telnr_algemeen_
-      //    field_data_field_telnr_direct_
-      //    field_data_field_voornaam
-      //    field_data_field_werkweek
-      //    field_data_user_cv
-      //
-      //    field_revision_field_achternaam
-      //    field_revision_field_bedrijfslogo
-      //    field_revision_field_bedrijfsnaam
-      //    field_revision_field_city
-      //    field_revision_field_dienstverb
-      //    field_revision_field_education
-      //    field_revision_field_functie
-      //    field_revision_field_functioncat
-      //    field_revision_field_link
-      //    field_revision_field_management_experience
-      //    field_revision_field_postcode
-      //    field_revision_field_state
-      //    field_revision_field_straat_nr
-      //    field_revision_field_telnr_algemeen_
-      //    field_revision_field_telnr_direct_
-      //    field_revision_field_voornaam
-      //    field_revision_field_werkweek
-      //    field_revision_user_cv
-      //
-      //    votingapi_cache
-      //    votingapi_vote
-      //
-      //  }
   }
   // return to normal db if not already using this db...
   db_set_active();
 }
 
 /**
- * hook to save user profile
+ * get all users from old db
  */
+function merge_users_from_db($schema) {
+  // select old db
+  db_set_active($schema);
+
+  // select uids from users in old db
+  $query = db_select('users','u');
+  $query->fields('u', array('uid'));
+  $result = $query->execute->fetchAll();
+
+  dms($result);
+  // insert user in new db
+  // $account = user_save()
+  // update user fields with newly saved user
+
+
+  //    update tables with new uid :
+  //
+  //    tables to update:
+  //    file_managed
+  //    history
+  //    node
+  //    node_revision
+  //    profile
+  //    sessions
+  //    twitter_account
+  //
+  //    update tables with new entity_id :
+  //
+  //    field_data_field_achternaam
+  //    field_data_field_bedrijfslogo
+  //    field_data_field_bedrijfsnaam
+  //    field_data_field_city
+  //    field_data_field_dienstverb
+  //    field_data_field_education
+  //    field_data_field_functie
+  //    field_data_field_functioncat
+  //    field_data_field_link
+  //    field_data_field_management_experience
+  //    field_data_field_postcode
+  //    field_data_field_state
+  //    field_data_field_straat_nr
+  //    field_data_field_telnr_algemeen_
+  //    field_data_field_telnr_direct_
+  //    field_data_field_voornaam
+  //    field_data_field_werkweek
+  //    field_data_user_cv
+  //
+  //    field_revision_field_achternaam
+  //    field_revision_field_bedrijfslogo
+  //    field_revision_field_bedrijfsnaam
+  //    field_revision_field_city
+  //    field_revision_field_dienstverb
+  //    field_revision_field_education
+  //    field_revision_field_functie
+  //    field_revision_field_functioncat
+  //    field_revision_field_link
+  //    field_revision_field_management_experience
+  //    field_revision_field_postcode
+  //    field_revision_field_state
+  //    field_revision_field_straat_nr
+  //    field_revision_field_telnr_algemeen_
+  //    field_revision_field_telnr_direct_
+  //    field_revision_field_voornaam
+  //    field_revision_field_werkweek
+  //    field_revision_user_cv
+  //
+  //    votingapi_cache
+  //    votingapi_vote
+}
