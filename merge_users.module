@@ -8,6 +8,50 @@
  */
 
 /**
+ * Implements hook_menu
+ */
+function merge_users_menu(){
+  $items = array();
+  $items['admin/config/merge_users'] = array(
+    'title' => 'merge users configuration',
+    'description' => 'This is the parent item',
+    // 'position' => 'left',
+    // 'weight' => -100,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+  // Need at least one child item before your section will appear.
+  $items['admin/config/merge_users/item'] = array(
+    'title' => 'merge',
+    'description' => 'This is the first child item in the section',
+    'page callback' => 'merge_users_start_merge_callback',
+    'access arguments' => array('administer site configuration'),
+  );
+  $items['admin/config/merge_users/merge'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'start merge from db',
+    'page callback' => 'merge_users_from_db',
+    'access arguments' => array('administer site configuration'),
+  );
+  return $items;
+}
+
+/**
+ * simple callback that for now will only act as manual trigger to start the merge
+ */
+function merge_users_start_merge_callback() {
+  // admin/config/merge_users/merge
+  $schemas = merge_users_get_db_schemas();
+  dsm($schemas);
+  $return = implode(" ", merge_users_get_db_schemas());
+  $return .= l(t('Start db merge'), 'admin/config/merge_users/merge', array('attributes' => array('class' => array())));
+
+  return $return;
+}
+
+/**
  * hook user creates account
  * Create user in alternative database upon registration
  * Implements hook_user_insert()
