@@ -277,7 +277,9 @@ function merge_users_from_db($schema) {
       $accounts[$user->uid]->uid = "";
       $accounts[$user->uid]->is_new = TRUE;
     }
-    if($i >= 5) {
+    // stopping at $i itterations for development.
+    // TODO: change this for live version.
+    if($i >= 20) {
       break;
     }
     $i++;
@@ -285,10 +287,8 @@ function merge_users_from_db($schema) {
 
   // $account now contains an array of user objects.
 
-  // db_set_active(); // set unique database as active db....
-  /**
-  need to alter settings.php so users table from unique user db is used
-  */
+  db_set_active(); // set unique database as active db....
+
   foreach($accounts as $old_uid => $account) {
 
     // check email exist in unique user db
@@ -301,16 +301,16 @@ function merge_users_from_db($schema) {
       // insert user in new db
       $new_uid = user_save($account);
       dsm($account->mail . " inserted old id was: " . $old_uid . " New id is: " . $new_uid->uid);
+      merge_users_update_uid($schema, $old_uid, $new_uid->uid);
     }
-    else {
-      dsm($account->mail . " already exists in unique user db ");
-    }
+    // else {
+    //   dsm($account->mail . " already exists in unique user db ");
+    // }
 
-    merge_users_update_uid($schema, $old_uid, $new_uid->uid);
+
     // update tables from old db
     // update tablename set uid / entity_id = $new_uid where uid / entity_id = $old_uid
   }
-  db_set_active();
   // update user fields with newly saved user
 
   return "";
@@ -355,6 +355,7 @@ function merge_users_update_uid($schema, $old_uid, $new_uid) {
   $entity_update_tables[] = 'field_data_field_voornaam';
   $entity_update_tables[] = 'field_data_field_werkweek';
   $entity_update_tables[] = 'field_data_user_cv';
+
   // field revisions
   $entity_update_tables[] = 'field_revision_field_achternaam';
   $entity_update_tables[] = 'field_revision_field_bedrijfslogo';
